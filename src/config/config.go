@@ -6,6 +6,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,23 +63,15 @@ const (
 	defaultStaticDir    = "static"
 	defaultTemplatesDir = "templates"
 
-	defaultWebPort = 8081
-	defaultTSPHost = "localhost"
-	defaultTSPPort = 6029
+	defaultWebPort = 8080
 )
 
 type WebServer struct {
 	Port int `json:"port"`
 }
 
-type TSPServer struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
 type ServerSetup struct {
 	Web WebServer `json:"web"`
-	TSP TSPServer `json:"tsp"`
 }
 
 var (
@@ -86,7 +79,7 @@ var (
 	Verbose = true  // Run in verbose mode
 	Version = false // Print version info and exit
 
-	File          = ""                                          // Configuration file to load
+	File          = defaultConfigFile                           // Configuration file to load
 	TMPPath       = defaultTMPDirPath                           // Temporal directory
 	WebPath       = defaultWebDirPath                           // Web directory
 	StaticPath    = filepath.Join(WebPath, defaultStaticDir)    // Static directory
@@ -94,10 +87,6 @@ var (
 
 	Data = &ServerSetup{
 		Web: WebServer{defaultWebPort},
-		TSP: TSPServer{
-			Host: defaultTSPHost,
-			Port: defaultTSPPort,
-		},
 	}
 
 	LogLevel  = "info"         // Log level to output [fatal|error|info|debug|trace]
@@ -123,6 +112,14 @@ func AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&Version, verName, verShort, Version, verDesc)
 }
 
+func fileExtension(f string) string {
+	if pos := strings.LastIndexByte(f, '.'); pos != -1 {
+		return f[pos+1:]
+	}
+
+	return f
+}
+
 // LoadConfigFile reads the specified config file
 func LoadConfigFile() error {
 	if File == "" {
@@ -134,16 +131,21 @@ func LoadConfigFile() error {
 	viper.SetDefault(vName, Verbose)
 	viper.SetDefault(tdName, TMPPath)
 
-	filename := filepath.Base(File)
-	viper.SetConfigName(filename[:len(filename)-len(filepath.Ext(filename))])
-	viper.AddConfigPath(filepath.Dir(File))
+	dirPath := filepath.Dir(File)
+	baseName := filepath.Base(File)
+	filename := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	ext := fileExtension(baseName)
 
-	//err := viper.ReadInConfig()
-	//if err != nil {
-	//	return fmt.Errorf("failed to read config file - %v", err)
-	//}
+	viper.SetConfigName(filename)
+	viper.SetConfigType(ext)
+	viper.AddConfigPath(dirPath)
 
-	err := viper.Unmarshal(&Data)
+	err := viper.ReadInConfig()
+	if err != nil {
+		return fmt.Errorf("failed to read config file - %v", err)
+	}
+
+	err = viper.Unmarshal(&Data)
 	if err != nil {
 		return fmt.Errorf("unable to decode into struct, %v", err)
 	}
@@ -152,8 +154,6 @@ func LoadConfigFile() error {
 	LogLevel = viper.GetString(llName)
 	Verbose = viper.GetBool(vName)
 	TMPPath = viper.GetString(tdName)
-
-	LoadLogConfig()
 
 	return nil
 }

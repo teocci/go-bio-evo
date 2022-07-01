@@ -21,10 +21,11 @@ const (
 
 var (
 	f       embed.FS
-	address = fmt.Sprintf(formatAddress, "", config.Data.Web.Port)
+	address string
 )
 
 func Start() {
+	address = fmt.Sprintf(formatAddress, "", config.Data.Web.Port)
 	gin.SetMode(gin.ReleaseMode)
 	_ = mime.AddExtensionType(".js", "application/javascript")
 
@@ -34,7 +35,7 @@ func Start() {
 	router.StaticFS("/css", http.Dir("web/static/css"))
 	router.StaticFS("/js", http.Dir("web/static/js"))
 	router.StaticFS("/img", http.Dir("web/static/img"))
-	router.StaticFile("/main.html", "web/static/main.html")
+	router.StaticFile("/page.html", "web/static/page.html")
 
 	router.Use(CORSMiddleware())
 	fmt.Printf("address : %v", address)
