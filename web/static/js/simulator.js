@@ -3,6 +3,8 @@
  * Author: teocci@yandex.com on 2022-6월-28
  */
 
+import Grid from './grid.js'
+
 export default class Simulator {
     static CHALLENGE_CIRCLE = 0
     static CHALLENGE_RIGHT_HALF = 1
